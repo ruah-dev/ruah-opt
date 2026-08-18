@@ -4,6 +4,13 @@ All notable changes to `@ruah-dev/opt` are documented here.
 
 ## Unreleased
 
+### Changed
+
+- README, PLAN, and `--help` lead with “Where did my tokens go?” First-priority
+  input is a Claude Code transcript; cache tokens stay out of `tokensIn`. CLI
+  test locks the question. M1 proven on a real ruah-tools session
+  (54 in / 27,200 out; cache 1.18M read / 1.09M write).
+
 ### Added
 
 - Claude Code transcript adapter (`src/claude.ts`). Point `ruah-opt analyze`

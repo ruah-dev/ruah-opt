@@ -1,15 +1,29 @@
 # ruah-opt — Deep Build Plan
 
-> Read first: `../GROK_BUILD_PLAN.md` §T3, `../ENGINEERING_STANDARDS.md`.
+> **Question it answers.** Where did my tokens go?
+>
+> First-priority input is a Claude Code transcript on disk — not a canonical
+> `Trace` that only other ruah tools emit. Cache tokens stay separate from
+> `tokensIn`. M2/M3 (waste, HTML) stay parked behind a correct M1 report on a
+> real author session. Any work item that does not serve that question is
+> rejected.
+>
+> Read first: `../GROK_BUILD_PLAN.md` §T3 + §0.7, `../ENGINEERING_STANDARDS.md`.
 > Package: `@ruah-dev/opt` · CLI: `ruah opt …` · Build slot: **T3 (content engine #1)**
 
 ## 1. Where the code is today (verified 2026-08-18)
 
 61/61 tests pass, CLI runs. Modules: `analyze.ts` (13K), `traces.ts` (canonical
 Trace ingestion), `estimator.ts`, `prices.ts` (price table), `format.ts`, `cli.ts`.
-Phase-1 profiler per its README. **Critical gap:** no Claude Code transcript
-adapter — it only reads canonical `Trace` objects, i.e. data almost nobody has yet.
-The adapter IS the product's adoption story. That's M1.
+Phase-1 profiler per its README. **Critical gap at audit time:** no Claude Code
+transcript adapter — it only read canonical `Trace` objects.
+
+**Status 2026-08-19.** M1 adapter (`src/claude.ts`) + M2 `waste` + M3 HTML are
+in source. M1 hard gate is met: `ruah opt analyze` on a real
+`~/.claude/projects/.../ruah-tools` session reports usage fields from the
+transcript (54 in / 27,200 out; cache 1,184,582 read / 1,092,910 write —
+cache labeled separately). Remaining for §4: demo GIF (HTML + session.txt
+exist), npm publish (token blocked). Do not add optimizer features.
 
 ## 2. Product shape
 

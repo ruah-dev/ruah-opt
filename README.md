@@ -1,147 +1,133 @@
-# ruah-opt
+# @ruah-dev/opt
 
-> Agent cost & token analytics — profile spend before optimizing it.
+> **Where did my tokens go?**
 
-[![CI](https://github.com/ruah-dev/ruah-opt/actions/workflows/ci.yml/badge.svg)](https://github.com/ruah-dev/ruah-opt/actions)
-[![npm](https://img.shields.io/npm/v/@ruah-dev/opt)](https://www.npmjs.com/package/@ruah-dev/opt)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-
-`ruah-opt` reads agent execution traces and tells you exactly where your token budget goes: which models, which tasks, which workflows, which individual spans — and which tokens were flat-out wasted. It is the analytics layer of the [ruah](https://ruah.sh) ecosystem ([github.com/ruah-dev](https://github.com/ruah-dev)).
-
-**Phase 1: profiler only.** You cannot reduce what you cannot see. Optimization layers (context compaction, model routing, cache/reuse) come later — first, `ruah-opt` shows you the bill.
-
-- **Zero runtime dependencies.** Node.js built-ins only — nothing else is installed with it.
-- **Standalone.** Works on any directory of trace files. [`ruah-orch`](https://github.com/ruah-dev/ruah-orch) emits the traces it reads, but is never required.
-- **JSON-first.** Every command supports `--json` for pipelines; humans get markdown tables.
-
-## Install
+Point it at a session you already have. The first-priority input is a Claude
+Code transcript (`~/.claude/projects/<slug>/*.jsonl`) — not a canonical
+`Trace` that only other ruah tools emit. Canonical Trace is the second adapter.
 
 ```bash
-npm i -g @ruah-dev/opt
-# pulls in @ruah-dev/cli — the command is `ruah opt`, not `ruah-opt`
-ruah opt analyze
+npm i -g @ruah-dev/opt            # also installs `ruah`
+ruah opt analyze ~/.claude/projects/<slug>/ --json
+ruah opt waste ~/.claude/projects/<slug>/<session>.jsonl
+ruah opt report ~/.claude/projects/<slug>/<session>.jsonl --format html --out report.html
 ```
 
-Requires Node.js >= 18.
+Requires Node.js >= 18. **Zero runtime dependencies** for the engine. Peer:
+`@ruah-dev/schema`. `@ruah-dev/cli` is a *front-door* install dep so `ruah opt`
+exists after `npm i -g @ruah-dev/opt`; the library does not import it.
 
-## Quickstart
+**Phase 1: profiler only.** It shows the bill. It does not compact, route, or
+cache. Cache-read / cache-write tokens are reported separately from `tokensIn`
+— mixing them inflates cost and destroys credibility.
 
-Run inside a repo where an orchestrator (or your own tooling) has written traces to `.ruah/traces/`:
+## 30-second quickstart
+
+On this workspace (2026-08-18, one real Claude Code session):
+
+```
+Tokens: 54 in / 27,200 out (27,254 total); cache 1,184,582 read / 1,092,910 write
+Cost: $0.8163
+```
+
+Most of the bill is **cache**, not new input. That is the answer to the
+question. Run it on yesterday's session:
 
 ```bash
-ruah-opt analyze
+ruah opt analyze ~/.claude/projects/$(pwd | tr / -)/ --json
 ```
 
-```markdown
-# ruah-opt report
-
-- Traces: 2 (7 spans, 4 LLM spans)
-- Tokens: 215,000 in / 7,600 out (222,600 total)
-- Cost: $0.8500
-- Duration: 30.0s
-
-## Cost by model
-
-| model             | spans | tokens in | tokens out | cost (USD) |
-| ----------------- | ----- | --------- | ---------- | ---------- |
-| claude-sonnet-4-6 | 2     | 80,000    | 6,000      | $0.7100    |
-| claude-fable-5    | 1     | 10,000    | 1,000      | $0.0900    |
-
-## Waste
-
-- Estimated wasted tokens: 26
-
-### Repeated tool outputs (identical, >= 2x)
-
-| span      | occurrences | redundant | wasted tokens | preview                  |
-| --------- | ----------- | --------- | ------------- | ------------------------ |
-| read_file | 3           | 2         | 26            | function add(a, b) { ... |
-```
-
-Machine-readable, for pipelines:
+## JSON output
 
 ```bash
-ruah-opt analyze --json
-```
-
-```json
+$ ruah opt analyze session.jsonl --json
 {
   "ok": true,
   "report": {
+    "generatedAt": "2026-08-18T21:41:55.623Z",
+    "tracesDir": "session.jsonl",
     "summary": {
-      "traces": 2,
-      "spans": 7,
-      "llmSpans": 4,
-      "tokensIn": 215000,
-      "tokensOut": 7600,
-      "totalTokens": 222600,
-      "costUsd": 0.85,
-      "durationMs": 30000,
-      "models": ["claude-fable-5", "claude-sonnet-4-6"],
+      "traces": 1,
+      "spans": 41,
+      "llmSpans": 27,
+      "tokensIn": 54,
+      "tokensOut": 27200,
+      "tokensCacheRead": 1184582,
+      "tokensCacheWrite": 1092910,
+      "totalTokens": 27254,
+      "costUsd": 0.816324,
+      "durationMs": 1403077,
+      "models": ["claude-fable-5"],
       "unpricedModels": []
     },
     "byModel": [
-      { "key": "claude-sonnet-4-6", "spans": 2, "tokensIn": 80000, "tokensOut": 6000, "costUsd": 0.71 }
+      { "key": "claude-fable-5", "spans": 27, "tokensIn": 54, "tokensOut": 27200, "costUsd": 0.816324 }
     ],
-    "byTask": ["..."],
-    "byWorkflow": ["..."],
-    "topSpans": ["..."],
-    "waste": {
-      "inputTokenThreshold": 20000,
-      "repeatedToolOutputs": [
-        { "spanName": "read_file", "occurrences": 3, "redundantCalls": 2, "estimatedWastedTokens": 26 }
-      ],
-      "oversizedInputs": [
-        { "spanName": "huge-context", "model": "claude-sonnet-4-6", "tokensIn": 120000 }
-      ],
-      "estimatedWastedTokens": 26
-    },
+    "topSpans": [],
+    "waste": { "estimatedWastedTokens": 0 },
     "warnings": []
   }
 }
 ```
 
-## Commands
+`tokensCacheRead` / `tokensCacheWrite` are **not** included in `tokensIn`.
+Totals that match the transcript's own usage fields are labeled as reported;
+heuristic estimates are labeled `estimated` (or `~` in tables). Unknown models
+get `cost: null` and a warning — never a guess presented as fact.
 
-| Command | What it does |
-|---------|--------------|
-| `ruah-opt analyze [tracesDir] [--top n] [--threshold n] [--json]` | Full report: totals, breakdowns, top spans, waste |
-| `ruah-opt cost [tracesDir] [--by model\|task\|workflow] [--json]` | Cost breakdown (default: by model) |
-| `ruah-opt count <file...> [--json]` | Token estimate for arbitrary text files |
-| `ruah-opt prices [--json]` | Effective model price table (built-ins + overrides) |
+Exit codes: `0` success · `1` user error · `2` internal. `--json` keeps
+machines on stdout and humans on stderr.
 
-All commands: exit `0` on success, `1` on user error, `2` on internal error. With `--json`, stdout is pure JSON and human logs go to stderr.
+## Waste
+
+`ruah opt waste` ranks context-bloat. Each finding has a heuristic id and a
+one-line fix.
+
+| Id | What it flags | Typical fix |
+|----|---------------|-------------|
+| H1 | Oversized tool result | Bound / summarize the result before it re-enters context |
+| H2 | Same file/args read ≥3× | Cache the read in the session; stop re-opening the file |
+| H3 | Immediate re-read of the same target | Don't re-fetch what you just saw |
+| H4 | Compaction / context-refresh churn | The summarization itself is on the bill — shrink what you keep |
+
+Heuristics are versioned (`heuristicsVersion`) and individually testable.
+They misfire; the README is honest about that. A finding is a lead, not a
+verdict.
 
 ```bash
-# Which task is burning the budget?
-ruah-opt cost --by task
-
-# How many tokens is this prompt before I send it anywhere?
-ruah-opt count prompt.md context/*.md --json
+ruah opt waste session.jsonl --json
 ```
 
-```json
-{
-  "ok": true,
-  "note": "heuristic estimate (~±20%), not a real tokenizer",
-  "files": [{ "file": "prompt.md", "tokens": 1432, "chars": 6210, "words": 980, "lines": 74 }],
-  "total": { "tokens": 1432, "chars": 6210, "words": 980, "lines": 74 }
-}
+## HTML report
+
+```bash
+ruah opt report session.jsonl --format html --out report.html
 ```
 
-## Trace input
+One self-contained file. Inline SVG, `prefers-color-scheme`, no CDN, no
+network. Transcript text is escaped. Open it from `file://`.
 
-`ruah-opt` reads every `.json` / `.jsonl` file under `.ruah/traces/` (or the directory you pass) and tolerates:
+Weekly loop: run Sunday, screenshot the headline, post. The file is the
+recurring asset.
 
-- a single canonical [`Trace`](https://github.com/ruah-dev/ruah-schema) object per file,
-- a JSON array of traces,
-- JSONL event streams — full traces per line, `{ "traceId", "span": {...} }` wrappers, or bare span events grouped by `traceId`.
+## Second adapter: canonical Trace
 
-Malformed files become warnings, never crashes. Spans missing token counts simply contribute zero; traces that only carry `totals` still count toward summary/task/workflow numbers. The `Trace` shape is the canonical one from [`@ruah-dev/schema`](https://github.com/ruah-dev/ruah-schema) — the same format `ruah-orch` emits and `ruah-obs` shares.
+If you already have [`Trace`](https://github.com/ruah-dev/ruah-schema) JSON
+under `.ruah/traces/`, `ruah opt analyze` still works. First-priority input
+is still the Claude Code transcript — this path is optional.
+
+```bash
+ruah opt analyze                  # .ruah/traces/ under cwd
+ruah opt analyze .ruah/traces/ --json
+```
+
+Malformed files become warnings, never crashes. Torn last JSONL lines
+(session killed mid-write) are skipped and counted.
 
 ## Prices
 
-The built-in price table is a **placeholder snapshot of mid-2026 list prices** (USD per 1M tokens) for `claude-fable-5`, `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5`, `gpt-5.2`, `gpt-5-mini`, `gemini-3-pro`, `gemini-3-flash`. Providers change prices without notice — override anything (or add your own models) in `.ruah/opt.json`:
+Built-in table is a **placeholder snapshot** of mid-2026 list prices (USD
+per 1M tokens). Override in `.ruah/opt.json`:
 
 ```json
 {
@@ -153,43 +139,60 @@ The built-in price table is a **placeholder snapshot of mid-2026 list prices** (
 }
 ```
 
-Model ids match exactly first, then by longest prefix — `claude-sonnet-4-6-20260115` resolves to the `claude-sonnet-4-6` entry. Models with token usage but no price entry are reported in `unpricedModels` and excluded from cost (never silently guessed). Spans that carry their own `costUsd` are always preferred over table estimates.
+Model ids match exactly first, then by longest prefix. Spans that carry
+their own `costUsd` win over the table. Cache tokens are priced at cache
+rates, not input rates.
 
-## Library use
+## Commands
+
+| Command | What it does |
+|---------|--------------|
+| `ruah opt analyze [dir\|session.jsonl] [--json]` | Totals, breakdowns, top spans, cache separate |
+| `ruah opt waste [dir\|session.jsonl] [--json]` | Rank H1–H4 context-bloat |
+| `ruah opt report [dir\|session.jsonl] --format html --out report.html` | Self-contained HTML |
+| `ruah opt cost [dir] [--by model\|task\|workflow]` | Cost breakdown |
+| `ruah opt count <file...>` | Heuristic token estimate for arbitrary text |
+| `ruah opt prices` | Effective price table |
+
+Standalone binary `ruah-opt` is identical.
+
+## Composition
+
+```bash
+ruah opt analyze session.jsonl --json > spend.json
+ruah watch render session.jsonl --out replay.html
+```
+
+## Library API
 
 ```ts
 import { analyzeTraces, estimateTokens, profile } from "@ruah-dev/opt";
 
 const report = await profile();            // .ruah/traces under process.cwd()
-console.log(report.summary.costUsd);
+console.log(report.summary.tokensCacheRead, report.summary.costUsd);
 
 estimateTokens("how many tokens is this?"); // heuristic, ±20%
 ```
 
-All trace types come from [`@ruah-dev/schema`](https://github.com/ruah-dev/ruah-schema) — `ruah-opt` never redefines them.
+Canonical types (`Trace`, `TraceSpan`, …) come from
+[`@ruah-dev/schema`](https://github.com/ruah-dev/ruah-schema) — never
+redefined here.
 
-## What v0.1 does NOT do
+## Honest limits
 
-- **No optimization.** It measures; it does not compact context, dedupe retrievals, route models, or cache anything. That is the next layer, built on these numbers.
-- **No exact token counts.** The estimator is a chars/words heuristic (~±20%). When traces carry real `tokensIn`/`tokensOut`, those are used as-is.
-- **No live capture.** It reads trace files after the fact; it does not hook into agents or proxy API calls.
-- **No authoritative prices.** Built-ins are clearly-marked placeholders; bring your own via `.ruah/opt.json`.
-- **No budget enforcement.** Budget policies per workflow are on the roadmap, not in this release.
+- **No optimization** — measure first.
+- **No exact tokenizer** — when the transcript reports usage, those numbers
+  win; otherwise the estimator is chars/words (~±20%) and labeled.
+- **No live capture** — reads files after the fact.
+- **No authoritative prices** — built-ins are placeholders.
+- **No budget enforcement.**
 
-## Zero runtime dependencies
+## Links
 
-`@ruah-dev/opt` ships with an empty `dependencies` field — Node.js built-ins only, matching the rest of the [ruah](https://ruah.sh) ecosystem. `@ruah-dev/schema` is a (types-only at runtime) peer for the canonical vocabulary.
-
-## Ecosystem
-
-| Package | Role |
-|---------|------|
-| [`@ruah-dev/schema`](https://github.com/ruah-dev/ruah-schema) | Canonical `Trace`/`Task`/`Workflow` types this tool consumes |
-| [`@ruah-dev/orch`](https://github.com/ruah-dev/ruah-orch) | Orchestrator that emits the traces (optional, never required) |
-| [`@ruah-dev/cli`](https://github.com/ruah-dev/ruah-cli) | Umbrella CLI — auto-discovers `ruah-opt` as `ruah opt` |
-
-Website: [ruah.sh](https://ruah.sh) · Org: [github.com/ruah-dev](https://github.com/ruah-dev)
+- Ecosystem: [https://ruah.sh](https://ruah.sh)
+- Organization: [https://github.com/ruah-dev](https://github.com/ruah-dev)
+- Schema layer: [@ruah-dev/schema](https://github.com/ruah-dev/ruah-schema)
 
 ## License
 
-[MIT](LICENSE)
+MIT

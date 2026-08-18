@@ -34,12 +34,15 @@ type CostGrouping = (typeof COST_GROUPINGS)[number];
 
 function buildHelp(): string {
 	return `
-ruah-opt — agent cost & token analytics (profile spend before optimizing it)
+ruah-opt — Where did my tokens go?
+
+Point it at a Claude Code session (or a traces dir). Cache tokens are
+reported separately from tokensIn. Profiler only — it does not optimize.
 
 Usage:
   ruah-opt analyze [tracesDir|session.jsonl] [--top <n>] [--threshold <tokens>] [--json]
                                           Full report: totals, breakdowns, top spans, waste
-                                          Also accepts a Claude Code session JSONL file
+                                          First-priority input: a Claude Code session JSONL
   ruah-opt cost [tracesDir] [--by model|task|workflow] [--json]
                                           Cost breakdown (default: by model)
   ruah-opt waste [tracesDir|session.jsonl] [--json]

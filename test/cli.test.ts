@@ -97,8 +97,20 @@ describe("ruah-opt CLI", () => {
 	it("--help prints usage and exits 0", () => {
 		const res = run(["--help"], dir);
 		assert.equal(res.status, 0);
-		assert.ok(res.stdout.includes("agent cost & token analytics"));
+		assert.ok(res.stdout.includes("Where did my tokens go?"));
 		assert.ok(res.stdout.includes("analyze [tracesDir"));
+		assert.ok(res.stdout.includes("Claude Code"));
+	});
+
+	it("README leads with the one-line question and the transcript wedge", () => {
+		const readme = readFileSync(
+			join(__dirname, "..", "..", "README.md"),
+			"utf-8",
+		);
+		assert.match(readme, /\*\*Where did my tokens go\?\*\*/);
+		assert.match(readme, /Claude Code transcript/);
+		assert.match(readme, /tokensCacheRead/);
+		assert.match(readme, /ruah opt analyze/);
 	});
 
 	it("-h prints usage and exits 0", () => {

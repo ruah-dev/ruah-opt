@@ -1,0 +1,29 @@
+{
+	"schemaVersion": "1",
+	"criteria": [
+		{
+			"id": "readme-question",
+			"description": "README leads with the one-line question",
+			"check": {
+				"type": "file_matches",
+				"path": "README.md",
+				"pattern": "Where did my tokens go"
+			}
+		},
+		{
+			"id": "package-json",
+			"description": "package.json is valid JSON",
+			"check": { "type": "json_valid", "file": "package.json" }
+		},
+		{
+			"id": "cli-exists",
+			"description": "CLI entry exists",
+			"check": { "type": "file_exists", "path": "src/cli.ts" }
+		},
+		{
+			"id": "adapter-exists",
+			"description": "Claude Code adapter is the wedge",
+			"check": { "type": "file_exists", "path": "src/claude.ts" }
+		}
+	]
+}
