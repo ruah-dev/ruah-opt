@@ -1,6 +1,6 @@
 {
 	"name": "@ruah-dev/opt",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Agent cost and token analytics \u2014 profile spend before optimizing it.",
 	"type": "module",
 	"ruah": {

@@ -4,6 +4,8 @@ All notable changes to `@ruah-dev/opt` are documented here.
 
 ## Unreleased
 
+## 0.1.1 — 2026-08-19
+
 ### Changed
 
 - README, PLAN, and `--help` lead with “Where did my tokens go?” First-priority
