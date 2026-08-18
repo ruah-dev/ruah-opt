@@ -102,9 +102,12 @@ export function parseClaudeCodeTranscript(
 				? doc.timestamp
 				: typeof doc.ts === "string"
 					? doc.ts
-					: new Date(0).toISOString();
-		startedAt ??= ts;
-		endedAt = ts;
+					: null;
+		if (ts) {
+			startedAt ??= ts;
+			endedAt = ts;
+		}
+		const spanTs = ts ?? startedAt ?? "";
 
 		if (doc.type !== "assistant") continue;
 		const message = isRecord(doc.message) ? doc.message : {};
@@ -138,7 +141,7 @@ export function parseClaudeCodeTranscript(
 			"assistant";
 		spans.push({
 			name,
-			startedAt: ts,
+			startedAt: spanTs,
 			spanId: `cc_${index}`,
 			type: "llm_call",
 			model: spanModel,
@@ -164,7 +167,7 @@ export function parseClaudeCodeTranscript(
 					undefined;
 				spans.push({
 					name: toolName,
-					startedAt: ts,
+					startedAt: spanTs,
 					spanId: typeof block.id === "string" ? block.id : `tool_${index}`,
 					type: "tool_call",
 					status: "ok",
