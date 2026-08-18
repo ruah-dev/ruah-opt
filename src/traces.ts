@@ -16,6 +16,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Trace, TraceSpan } from "@ruah-dev/schema";
+import { looksLikeClaudeCode, parseClaudeCodeTranscript } from "./claude.js";
 
 /** Default traces location, relative to the consumer's CWD. */
 export const DEFAULT_TRACES_DIR = join(".ruah", "traces");
@@ -162,6 +163,15 @@ export function loadTraceFile(path: string): LoadTracesResult {
 		// Fall through to JSONL parsing.
 	}
 
+	if (looksLikeClaudeCode(raw)) {
+		const parsed = parseClaudeCodeTranscript(raw, fileId);
+		return {
+			traces: parsed.trace.spans.length > 0 ? [parsed.trace] : [],
+			filesRead: 1,
+			warnings: parsed.warnings,
+		};
+	}
+
 	if (wholeParsed) {
 		if (Array.isArray(wholeDoc)) {
 			wholeDoc.forEach((item, index) => {
@@ -226,10 +236,16 @@ function collectTraceFiles(dir: string, out: string[]): void {
  */
 export function loadTraces(dir: string): LoadTracesResult {
 	let isDir = false;
+	let isFile = false;
 	try {
-		isDir = statSync(dir).isDirectory();
+		const st = statSync(dir);
+		isDir = st.isDirectory();
+		isFile = st.isFile();
 	} catch {
 		isDir = false;
+	}
+	if (isFile) {
+		return loadTraceFile(dir);
 	}
 	if (!isDir) {
 		throw new TracesDirNotFoundError(dir);

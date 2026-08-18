@@ -92,7 +92,7 @@ describe("ruah-opt CLI", () => {
 		const res = run(["--help"], dir);
 		assert.equal(res.status, 0);
 		assert.ok(res.stdout.includes("agent cost & token analytics"));
-		assert.ok(res.stdout.includes("analyze [tracesDir]"));
+		assert.ok(res.stdout.includes("analyze [tracesDir"));
 	});
 
 	it("-h prints usage and exits 0", () => {

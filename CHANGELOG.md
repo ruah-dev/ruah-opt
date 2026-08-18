@@ -2,6 +2,16 @@
 
 All notable changes to `@ruah-dev/opt` are documented here.
 
+## Unreleased
+
+### Added
+
+- Claude Code transcript adapter (`src/claude.ts`). Point `ruah-opt analyze`
+  at a session `.jsonl` or a directory of them. Cache tokens are kept
+  separate (`tokensCacheRead` / `tokensCacheWrite`). Torn last lines are
+  skipped with a warning.
+- `analyze` accepts a single file, not just a traces directory.
+
 ## 0.1.0 — 2026-06-12
 
 Initial release — analytics/profiler mode only.

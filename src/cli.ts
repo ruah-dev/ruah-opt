@@ -35,8 +35,9 @@ function buildHelp(): string {
 ruah-opt — agent cost & token analytics (profile spend before optimizing it)
 
 Usage:
-  ruah-opt analyze [tracesDir] [--top <n>] [--threshold <tokens>] [--json]
+  ruah-opt analyze [tracesDir|session.jsonl] [--top <n>] [--threshold <tokens>] [--json]
                                           Full report: totals, breakdowns, top spans, waste
+                                          Also accepts a Claude Code session JSONL file
   ruah-opt cost [tracesDir] [--by model|task|workflow] [--json]
                                           Cost breakdown (default: by model)
   ruah-opt count <file...> [--json]       Estimate tokens for arbitrary text files

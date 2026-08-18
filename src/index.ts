@@ -16,6 +16,7 @@
  */
 
 export * from "./analyze.js";
+export * from "./claude.js";
 export * from "./estimator.js";
 export * from "./format.js";
 export * from "./prices.js";

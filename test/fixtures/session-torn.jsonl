@@ -1,0 +1,2 @@
+{"type":"assistant","timestamp":"2026-08-18T10:00:01.000Z","message":{"role":"assistant","model":"claude-haiku-4-5","usage":{"input_tokens":10,"output_tokens":4},"content":[{"type":"text","text":"ok"}]}}
+{"type":"assistant","timestamp":"2026-08-18T10:00:02.000Z","message":{"role":"assistant","usage":{"input_tokens":1
