@@ -88,6 +88,10 @@ export interface OptSummary {
 	llmSpans: number;
 	tokensIn: number;
 	tokensOut: number;
+	/** Prompt-cache read tokens (not included in tokensIn). */
+	tokensCacheRead?: number;
+	/** Prompt-cache write tokens (not included in tokensIn). */
+	tokensCacheWrite?: number;
 	totalTokens: number;
 	/** Total cost in USD (recorded span costs + price-table estimates). */
 	costUsd: number;
@@ -265,6 +269,8 @@ export function analyzeTraces(
 	let llmSpanCount = 0;
 	let totalTokensIn = 0;
 	let totalTokensOut = 0;
+	let totalCacheRead = 0;
+	let totalCacheWrite = 0;
 	let totalCost = 0;
 	let totalDuration = 0;
 
@@ -322,6 +328,8 @@ export function analyzeTraces(
 
 			totalTokensIn += tokensIn;
 			totalTokensOut += tokensOut;
+			totalCacheRead += numberOr(span.tokensCacheRead, 0);
+			totalCacheWrite += numberOr(span.tokensCacheWrite, 0);
 			totalCost += costUsd;
 			traceTokens += tokensIn + tokensOut;
 			traceCost += costUsd;
@@ -371,6 +379,8 @@ export function analyzeTraces(
 			const tIn = numberOr(trace.totals.tokensIn, 0);
 			const tOut = numberOr(trace.totals.tokensOut, 0);
 			const tCost = numberOr(trace.totals.costUsd, 0);
+			totalCacheRead += numberOr(trace.totals.tokensCacheRead, 0);
+			totalCacheWrite += numberOr(trace.totals.tokensCacheWrite, 0);
 			if (tIn > 0 || tOut > 0 || tCost > 0) {
 				totalTokensIn += tIn;
 				totalTokensOut += tOut;
@@ -414,6 +424,8 @@ export function analyzeTraces(
 			llmSpans: llmSpanCount,
 			tokensIn: totalTokensIn,
 			tokensOut: totalTokensOut,
+			tokensCacheRead: totalCacheRead,
+			tokensCacheWrite: totalCacheWrite,
 			totalTokens: totalTokensIn + totalTokensOut,
 			costUsd: roundUsd(totalCost),
 			durationMs: totalDuration,

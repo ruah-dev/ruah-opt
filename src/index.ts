@@ -19,6 +19,8 @@ export * from "./analyze.js";
 export * from "./claude.js";
 export * from "./estimator.js";
 export * from "./format.js";
+export * from "./html.js";
 export * from "./prices.js";
 export * from "./traces.js";
 export { VERSION } from "./version.js";
+export * from "./waste.js";

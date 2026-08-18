@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
@@ -323,5 +329,30 @@ describe("ruah-opt CLI", () => {
 		const res = run(["frobnicate"], dir);
 		assert.equal(res.status, 1);
 		assert.ok(res.stderr.includes("unknown command"));
+	});
+
+	it("waste --json returns ranked findings", () => {
+		writeFixtureTraces(dir);
+		const res = run(["waste", "--json"], dir);
+		assert.equal(res.status, 0);
+		const data = JSON.parse(res.stdout);
+		assert.equal(data.ok, true);
+		assert.equal(data.schemaVersion, "1");
+		assert.ok(Array.isArray(data.findings));
+	});
+
+	it("report --format html writes a self-contained file", () => {
+		writeFixtureTraces(dir);
+		const out = join(dir, "out.html");
+		const res = run(
+			["report", "--format", "html", "--out", out, "--json"],
+			dir,
+		);
+		assert.equal(res.status, 0);
+		const data = JSON.parse(res.stdout);
+		assert.equal(data.ok, true);
+		const html = readFileSync(out, "utf-8");
+		assert.match(html, /<title>/);
+		assert.equal(/https?:\/\//.test(html), false);
 	});
 });

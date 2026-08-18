@@ -65,7 +65,10 @@ export function renderReport(report: OptReport): string {
 		`- Traces: ${formatInt(summary.traces)} (${formatInt(summary.spans)} spans, ${formatInt(summary.llmSpans)} LLM spans)`,
 	);
 	lines.push(
-		`- Tokens: ${formatInt(summary.tokensIn)} in / ${formatInt(summary.tokensOut)} out (${formatInt(summary.totalTokens)} total)`,
+		`- Tokens: ${formatInt(summary.tokensIn)} in / ${formatInt(summary.tokensOut)} out (${formatInt(summary.totalTokens)} total)` +
+			(summary.tokensCacheRead || summary.tokensCacheWrite
+				? `; cache ${formatInt(summary.tokensCacheRead ?? 0)} read / ${formatInt(summary.tokensCacheWrite ?? 0)} write`
+				: ""),
 	);
 	lines.push(`- Cost: ${formatUsd(summary.costUsd)}`);
 	lines.push(`- Duration: ${formatDuration(summary.durationMs)}`);

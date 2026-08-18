@@ -8,7 +8,7 @@
  * to stderr.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { type OptReport, profile } from "./analyze.js";
 import { estimateText } from "./estimator.js";
@@ -18,9 +18,11 @@ import {
 	renderBuckets,
 	renderReport,
 } from "./format.js";
+import { renderHtml } from "./html.js";
 import { loadOptConfig, PRICE_TABLE_NOTE, resolvePrices } from "./prices.js";
-import { TracesDirNotFoundError } from "./traces.js";
+import { loadTraces, TracesDirNotFoundError } from "./traces.js";
 import { VERSION } from "./version.js";
+import { findWaste, WASTE_HEURISTICS_VERSION } from "./waste.js";
 
 export interface ParsedArgs {
 	_: string[];
@@ -40,6 +42,10 @@ Usage:
                                           Also accepts a Claude Code session JSONL file
   ruah-opt cost [tracesDir] [--by model|task|workflow] [--json]
                                           Cost breakdown (default: by model)
+  ruah-opt waste [tracesDir|session.jsonl] [--json]
+                                          Rank context-bloat offenders (H1–H4)
+  ruah-opt report [tracesDir|session.jsonl] --format html [--out report.html]
+                                          Self-contained HTML (offline, no CDN)
   ruah-opt count <file...> [--json]       Estimate tokens for arbitrary text files
   ruah-opt prices [--json]                Show the effective model price table
 
@@ -67,9 +73,9 @@ Exit codes:
 
 Examples:
   ruah-opt analyze --json
-  ruah-opt cost --by task
-  ruah-opt count prompt.md context.txt --json
-  ruah-opt prices --json
+  ruah-opt analyze ~/.claude/projects/<slug>/ --json
+  ruah-opt waste session.jsonl --json
+  ruah-opt report session.jsonl --format html --out report.html
 `;
 }
 
@@ -168,6 +174,72 @@ async function loadReport(
 		return null;
 	}
 	return report;
+}
+
+function tracesFromReport(
+	report: OptReport,
+): import("@ruah-dev/schema").Trace[] {
+	if (!report.tracesDir) return [];
+	return loadTraces(report.tracesDir).traces;
+}
+
+async function cmdWaste(args: ParsedArgs, json: boolean): Promise<void> {
+	const report = await loadReport(args, json);
+	if (report === null) return;
+	const findings = findWaste(tracesFromReport(report));
+	if (json) {
+		emitJson({
+			ok: true,
+			schemaVersion: "1",
+			heuristicsVersion: WASTE_HEURISTICS_VERSION,
+			findings,
+			sessionTokens: report.summary.totalTokens,
+		});
+		return;
+	}
+	if (findings.length === 0) {
+		console.log("No waste findings.");
+		return;
+	}
+	console.log("# ruah-opt waste");
+	console.log("");
+	console.log(
+		markdownTable(
+			["#", "H", "tokens", "%", "span", "fix"],
+			findings
+				.slice(0, 20)
+				.map((f, i) => [
+					String(i + 1),
+					f.heuristic,
+					formatInt(f.tokens),
+					`${f.percentOfSession}`,
+					f.spanName,
+					f.fix,
+				]),
+		),
+	);
+}
+
+async function cmdHtmlReport(args: ParsedArgs, json: boolean): Promise<void> {
+	const format = args.flags.format;
+	if (format !== undefined && format !== "html") {
+		userError('--format must be "html"', json);
+		return;
+	}
+	const report = await loadReport(args, json);
+	if (report === null) return;
+	const html = renderHtml(report, findWaste(tracesFromReport(report)));
+	const outFlag = args.flags.out;
+	const out =
+		typeof outFlag === "string" && outFlag !== ""
+			? resolve(process.cwd(), outFlag)
+			: resolve(process.cwd(), "report.html");
+	writeFileSync(out, html, "utf8");
+	if (json) {
+		emitJson({ ok: true, written: out, bytes: html.length });
+	} else {
+		console.log(`Wrote ${out} (${html.length} bytes)`);
+	}
 }
 
 async function cmdAnalyze(args: ParsedArgs, json: boolean): Promise<void> {
@@ -344,6 +416,12 @@ async function main(): Promise<void> {
 	switch (command) {
 		case "analyze":
 			await cmdAnalyze(args, json);
+			break;
+		case "waste":
+			await cmdWaste(args, json);
+			break;
+		case "report":
+			await cmdHtmlReport(args, json);
 			break;
 		case "cost":
 			await cmdCost(args, json);

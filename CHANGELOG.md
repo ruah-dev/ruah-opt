@@ -11,6 +11,9 @@ All notable changes to `@ruah-dev/opt` are documented here.
   separate (`tokensCacheRead` / `tokensCacheWrite`). Torn last lines are
   skipped with a warning.
 - `analyze` accepts a single file, not just a traces directory.
+- Transcripts that start with `custom-title` / `mode` are recognized as Claude Code sessions (real sessions do this).
+- `ruah-opt waste` — H1 oversized result, H2 repeated reads, H3 immediate re-read, H4 compaction. Each finding has a one-line fix.
+- `ruah-opt report --format html --out report.html` — self-contained, no CDN, escapes untrusted text.
 
 ## 0.1.0 — 2026-06-12
 

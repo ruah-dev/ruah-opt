@@ -18,6 +18,9 @@ const CC_TYPES = new Set([
 	"attachment",
 	"queue-operation",
 	"file-history-snapshot",
+	"custom-title",
+	"mode",
+	"last-prompt",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -153,6 +156,12 @@ export function parseClaudeCodeTranscript(
 			for (const block of content) {
 				if (!isRecord(block) || block.type !== "tool_use") continue;
 				const toolName = typeof block.name === "string" ? block.name : "tool";
+				const input = isRecord(block.input) ? block.input : {};
+				const path =
+					(typeof input.path === "string" && input.path) ||
+					(typeof input.file_path === "string" && input.file_path) ||
+					(typeof input.filePath === "string" && input.filePath) ||
+					undefined;
 				spans.push({
 					name: toolName,
 					startedAt: ts,
@@ -161,6 +170,8 @@ export function parseClaudeCodeTranscript(
 					status: "ok",
 					attributes: {
 						inputBytes: JSON.stringify(block.input ?? "").length,
+						path,
+						argsKey: JSON.stringify(block.input ?? null),
 					},
 				});
 			}
@@ -188,14 +199,21 @@ export function parseClaudeCodeTranscript(
 	return { trace, warnings, skippedLines };
 }
 
-/** True when a file's parsed lines look like a Claude Code transcript. */
+/**
+ * True when a file looks like a Claude Code transcript.
+ * Real sessions often start with `custom-title` / `mode` before the first
+ * user/assistant line — scan a window, don't decide from line 1 alone.
+ */
 export function looksLikeClaudeCode(raw: string): boolean {
+	let seen = 0;
 	for (const line of raw.split(/\r?\n/)) {
 		const trimmed = line.trim();
 		if (trimmed === "") continue;
 		try {
 			const doc = JSON.parse(trimmed) as unknown;
-			return isClaudeCodeEvent(doc);
+			if (isClaudeCodeEvent(doc)) return true;
+			seen++;
+			if (seen >= 30) return false;
 		} catch {}
 	}
 	return false;
