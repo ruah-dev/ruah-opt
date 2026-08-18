@@ -18,10 +18,8 @@
 
 ```bash
 npm i -g @ruah-dev/opt
-# or via the umbrella CLI
-npm i -g @ruah-dev/cli   # then: ruah opt <command>
-# or one-off
-npx @ruah-dev/opt analyze
+# pulls in @ruah-dev/cli — the command is `ruah opt`, not `ruah-opt`
+ruah opt analyze
 ```
 
 Requires Node.js >= 18.
