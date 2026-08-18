@@ -1,0 +1,48 @@
+# CI for @ruah-dev/opt
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    name: Build & Test (node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Clone schema sibling (resolves file:../ruah-schema)
+        run: |
+          git clone --depth 1 https://github.com/ruah-dev/ruah-schema ../ruah-schema
+          npm --prefix ../ruah-schema install
+          npm --prefix ../ruah-schema run build
+
+      - name: Install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: CLI smoke
+        run: |
+          node bin/ruah-opt.js --help
+          node bin/ruah-opt.js --version
+          node bin/ruah-opt.js prices --json
