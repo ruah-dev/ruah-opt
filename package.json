@@ -1,11 +1,11 @@
 {
 	"name": "@ruah-dev/opt",
 	"version": "0.1.0",
-	"description": "Agent cost and token analytics — profile spend before optimizing it.",
+	"description": "Agent cost and token analytics \u2014 profile spend before optimizing it.",
 	"type": "module",
 	"ruah": {
 		"namespace": "opt",
-		"description": "Agent cost and token analytics — profile spend before optimizing it"
+		"description": "Agent cost and token analytics \u2014 profile spend before optimizing it"
 	},
 	"bin": {
 		"ruah-opt": "./bin/ruah-opt.js"
@@ -68,7 +68,7 @@
 		"node": ">=18.0.0"
 	},
 	"dependencies": {
-		"@ruah-dev/cli": "^1.2.0"
+		"@ruah-dev/cli": "github:ruah-dev/ruah-cli#v1.2.2"
 	},
 	"peerDependencies": {
 		"@ruah-dev/schema": "^0.1.0"
